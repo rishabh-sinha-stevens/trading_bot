@@ -23,3 +23,9 @@ class SimulatedTradingBot:
         stock = yf.Ticker(symbol)
         df = stock.history(period="60d", interval="5m")  # 60 days of 5-minute data
         return df
+    
+    def calculate_indicators(self, df):
+        # Calculate moving averages based on 5-minute periods
+        df['Short_MA'] = df['Close'].rolling(window=self.short_window).mean()  # 5 minutes
+        df['Long_MA'] = df['Close'].rolling(window=self.long_window).mean()  # 25 minutes
+        return df
