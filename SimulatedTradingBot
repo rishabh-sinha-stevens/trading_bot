@@ -18,3 +18,8 @@ class SimulatedTradingBot:
                 'profit_loss': 0
             } for symbol in symbols}
 
+    def get_data(self, symbol):
+        # Fetch intraday data (5-minute intervals) for a specific symbol
+        stock = yf.Ticker(symbol)
+        df = stock.history(period="60d", interval="5m")  # 60 days of 5-minute data
+        return df
