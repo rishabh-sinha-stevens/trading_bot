@@ -6,3 +6,15 @@ from datetime import datetime
 
 
 class SimulatedTradingBot:
+    def __init__(self, symbols, short_window=1, long_window=5, total_capital=10000):
+            self.symbols = symbols
+            self.short_window = short_window  # 1 period = 5 minutes
+            self.long_window = long_window  # 5 periods = 25 minutes
+            self.total_capital = total_capital
+            self.portfolio = {symbol: {
+                'cash': total_capital / len(symbols),
+                'position': 0,
+                'trades': [],
+                'profit_loss': 0
+            } for symbol in symbols}
+
