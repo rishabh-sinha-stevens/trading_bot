@@ -5,7 +5,7 @@ import time
 from datetime import datetime
 
 
-class SimulatedTradingBot:
+class SimulatedTradingBotv1:
     def __init__(self, symbols, short_window=1, long_window=5, total_capital=10000):
             self.symbols = symbols
             self.short_window = short_window  # 1 period = 5 minutes
