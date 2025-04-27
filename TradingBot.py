@@ -100,10 +100,71 @@ class TradingBot:
         return df
 
     def execute_simulated_trade(self, symbol, price, signal):
-        pass
+        portfolio = self.portfolio[symbol]  # Access stock's portfolio data
 
+        # Buy signal: Purchase shares if cash is available
+        if signal == 1 and self.initial_cash > price:
+            shares_to_buy = int(self.initial_cash / price)  # Calculate affordable shares
+            cost = shares_to_buy * price
+            if cost <= self.initial_cash:
+                portfolio['position'] += shares_to_buy  # Update share count
+                self.initial_cash -= cost  # Deduct cost from cash
+                portfolio['cash'] = 0  # Reset stock-specific cash
+                trade = {
+                    'type': 'BUY',
+                    'shares': shares_to_buy,
+                    'price': price,
+                    'timestamp': datetime.now()
+                }
+                portfolio['trades'].append(trade)  # Record trade
+                print(f"{datetime.now()}: SIMULATED BUY {shares_to_buy} {symbol} shares at ${price:.2f}")
+
+        # Sell signal: Sell all shares if holding a position
+        elif signal == -1 and portfolio['position'] > 0:
+            sale_proceeds = portfolio['position'] * price  # Calculate sale value
+            # Find the last buy price for profit/loss calculation
+            last_buy_price = next((trade['price'] for trade in reversed(portfolio['trades'])
+                                   if trade['type'] in ['BUY', 'INITIAL_BUY']), 0)
+            trade_pl = (price - last_buy_price) * portfolio['position']  # Calculate trade profit/loss
+            portfolio['profit_loss'] += trade_pl  # Update stock's total profit/loss
+
+            portfolio['cash'] += sale_proceeds  # Add proceeds to stock's cash
+            self.initial_cash += sale_proceeds  # Add proceeds to total cash
+            trade = {
+                'type': 'SELL',
+                'shares': portfolio['position'],
+                'price': price,
+                'timestamp': datetime.now(),
+                'trade_pl': trade_pl
+            }
+            portfolio['trades'].append(trade)  # Record trade
+            print(f"{datetime.now()}: SIMULATED SELL {portfolio['position']} {symbol} shares at ${price:.2f}")
+            portfolio['position'] = 0  # Reset share count
+
+    # Display the current portfolio status
     def display_portfolio(self):
-        pass
+        total_value = self.initial_cash  # Start with remaining cash
+        total_pl = 0  # Track total profit/loss
+
+        # Iterate through each stock in the portfolio
+        for symbol in self.portfolio:
+            # Get latest stock price
+            latest_price = yf.Ticker(symbol).info['regularMarketPrice']
+            # Calculate stock's total value (shares * price + cash)
+            value = self.portfolio[symbol]['position'] * latest_price + self.portfolio[symbol]['cash']
+            total_value += self.portfolio[symbol]['position'] * latest_price
+            total_pl += self.portfolio[symbol]['profit_loss']
+
+            # Print stock details
+            print(f"{symbol} - Cash: ${self.portfolio[symbol]['cash']:.2f} | "
+                  f"Shares: {int(self.portfolio[symbol]['position'])} | "
+                  f"Value: ${value:.2f} | "
+                  f"P/L: ${self.portfolio[symbol]['profit_loss']:.2f}")
+
+        # Print portfolio summary
+        print(f"Remaining Cash: ${self.initial_cash:.2f}")
+        print(f"Total Portfolio Value: ${total_value:.2f}")
+        print(f"Total Profit/Loss: ${total_pl:.2f}")
 
     def run(self):
         pass
