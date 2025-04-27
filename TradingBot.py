@@ -99,6 +99,7 @@ class TradingBot:
         df['Position'] = df['Signal'].diff()
         return df
 
+    # Execute simulated trades based on signals
     def execute_simulated_trade(self, symbol, price, signal):
         portfolio = self.portfolio[symbol]  # Access stock's portfolio data
 
@@ -166,9 +167,63 @@ class TradingBot:
         print(f"Total Portfolio Value: ${total_value:.2f}")
         print(f"Total Profit/Loss: ${total_pl:.2f}")
 
+    # Run the trading bot
     def run(self):
-        pass
+        print(f"Starting simulated trading bot with ${self.total_capital} total capital")
+        self.search_stock()  # Let user select stocks
 
+        # Exit if no stocks were added
+        if not self.portfolio:
+            print("No stocks selected. Exiting.")
+            return
+
+        # Display initial portfolio
+        print(f"\nInitial Portfolio:")
+        self.display_portfolio()
+        print("-" * 50)
+
+        # Main trading loop
+        while True:
+            try:
+                # Start a new 5-minute cycle
+                cycle_start = datetime.now()
+                print(f"\nUpdate at {cycle_start.strftime('%Y-%m-%d %H:%M:%S')}:")
+
+                # Process each stock in the portfolio
+                for symbol in self.portfolio.keys():
+                    df = self.get_data(symbol)  # Fetch stock data
+                    if df.empty:
+                        print(f"No data available for {symbol}")
+                        continue
+
+                    # Calculate indicators and generate signals
+                    df = self.calculate_indicators(df)
+                    df = self.generate_signals(df)
+
+                    # Get latest price and signal
+                    latest_price = df['Close'].iloc[-1]
+                    latest_signal = df['Position'].iloc[-1]
+
+                    # Execute trade if signal is valid
+                    if not pd.isna(latest_signal):
+                        self.execute_simulated_trade(symbol, latest_price, latest_signal)
+
+                # Display portfolio status after processing
+                print("\nPortfolio Status:")
+                self.display_portfolio()
+                print("-" * 50)
+
+                # Wait to maintain 5-minute cycle
+                elapsed_time = (datetime.now() - cycle_start).total_seconds()
+                sleep_time = max(300 - elapsed_time, 0)  # Ensure 5-minute cycle
+                time.sleep(sleep_time)
+
+            except Exception as e:
+                print(f"Error: {e}")  # Handle errors and retry after 1 minute
+                time.sleep(60)
+
+
+# Entry point to run the bot
 if __name__ == "__main__":
-    bot = TradingBot(total_capital=10000)
-    bot.run()
+    bot = TradingBot(total_capital=10000)  # Initialize bot with $10,000
+    bot.run()  # Start the trading simulation
