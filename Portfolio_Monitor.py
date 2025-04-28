@@ -76,6 +76,41 @@ class PortfolioMonitor:
 
         except Exception as e:
             print(f"Error fetching or analyzing news for {symbol}: {e}")
+            
+    def add_stock(self):
+        print("\nAdding new stock to portfolio:")
+        self.bot.search_stock()
+        print("Updated Portfolio:")
+        self.bot.display_portfolio()
 
+    def run(self):
+        while True:
+            self.display_menu()
+            choice = input("Enter your choice (1-4): ")
+            if choice == '1':
+                self.view_portfolio()
+            elif choice == '2':
+                self.analyze_news()
+            elif choice == '3':
+                self.add_stock()
+            elif choice == '4':
+                print("Exiting Portfolio Monitor.")
+                break
+            else:
+                print("Invalid choice. Please try again.")
+            time.sleep(1)  # Brief pause for readability
+
+
+if __name__ == "__main__":
+    # Initialize a TradingBot instance
+    bot = TradingBot(total_capital=10000)
+    monitor = PortfolioMonitor(bot)
+
+    # Let user set up initial portfolio
+    print("Starting Portfolio Setup...")
+    bot.search_stock()  # Prompt user to add stocks
+
+    print("\nStarting Portfolio Monitor...")
+    monitor.run()
 
  
