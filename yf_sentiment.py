@@ -97,4 +97,27 @@ def process_news_sentiment(ticker_symbol, use_article_content=False):
         })
 
     return pd.DataFrame(results)
+def main():
+    #Main function to prompt user for a ticker and display sentiment analysis.
+    ticker = input("Enter the stock ticker symbol (e.g., TSLA, MSFT): ").strip().upper()
+    if not ticker:
+        print("No ticker provided.")
+        return
 
+    # Test sentiment analyzers
+    test_text = "This company is performing amazingly well!"
+    print(f"VADER test: {analyze_sentiment_vader(test_text)}")
+    print(f"TextBlob test: {analyze_sentiment_textblob(test_text)}")
+
+    df = process_news_sentiment(ticker, use_article_content=False)
+    if df is not None and not df.empty:
+        print(f"\nSentiment analysis for {ticker}:")
+        # Format output with fixed-width columns
+        pd.set_option('display.colheader_justify', 'left')
+        pd.set_option('display.max_colwidth', 60)
+        print(df[['title', 'vader_sentiment', 'textblob_sentiment', 'analyzed_text_preview']].to_string(index=False))
+    else:
+        print(f"No sentiment data available for {ticker}.")
+
+if __name__ == "__main__":
+    main()
