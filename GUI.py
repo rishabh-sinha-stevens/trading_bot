@@ -222,3 +222,94 @@ class TradingApp(tk.Tk):
                     f"{row['textblob_sentiment']:+.2f}"
                 )
             )
+
+    # ------------------------------------------------------------------ periodic refresh
+    def _refresh(self):
+        """ Refresh and update the UI periodically. """
+        if self.bot_running:
+            self._bot_cycle()
+        self._populate_tables()
+        
+        # calling the refresh method again after REFRESH_MS milliseconds
+        self.after(self.REFRESH_MS, self._refresh)
+
+    def _bot_cycle(self):
+        """ Runs the bot cycle logic for trading and update the UI accordingly. """
+        for sym in list(self.bot.portfolio.keys()):
+            if self.sim_date:
+                # Historical mode
+                df  = self.sim_data[sym]
+                idx = self.sim_idx[sym]
+                print("idx", idx)
+                row = df.iloc[idx]
+                price, signal = row["Close"], row["Position"]
+                ts = df.index[idx]
+
+                if signal == 1 or signal == -1:
+                    self.bot.execute_simulated_trade(sym, price, int(signal), timestamp=ts)
+
+                # increment the index for the next cycle
+                self.sim_idx[sym] = min(idx + 1, len(df)-1)
+
+            else:
+                # LIVE mode 
+                df = self.bot.get_data(sym, None)
+                if df.empty: continue
+                df = self.bot.calculate_indicators(df)
+                price  = df["Close"].iloc[-1]
+                signal = df["Position"].iloc[-1]
+                ts     = df.index[-1]
+                self.bot.execute_simulated_trade(sym, price, int(signal), timestamp=ts)
+
+            # update the bot's status label
+            self.status_lbl.config(
+                text=f"Status: Running ({'SIM' if self.sim_date else 'LIVE'}) — last @ {ts:%H:%M:%S}"
+            )
+
+    def _populate_tables(self):
+        """ Populate the tabel and graph with the current protfolio and trading data. """
+        snap = self.bot.get_snapshot()
+
+        # Clear the treeview and populate it with the current data
+        self.tree.delete(*self.tree.get_children())
+        for sym, rec in snap["positions"].items():
+            price = self.bot._safe_price(sym)
+            value = rec["position"] * price
+            pl = rec["profit_loss"]
+            self.tree.insert(
+                "", "end",
+                values=(sym, int(rec["position"]), f"{price:.2f}", f"{value:.2f}", f"{pl:+.2f}")
+            )
+        self.summary_lbl.config(
+            text=f"Cash: ${snap['cash']:.2f}   |   Total Value: ${snap['total_value']:.2f}   |   Total P/L: {snap['total_pl']:+.2f}"
+        )
+
+        # if bot is running and has something in portfolio then update the chart and table
+        if self.bot_running and self.bot.portfolio:
+            # select the first stock in the portfolio for plotting
+            sym = next(iter(self.bot.portfolio))
+            # get the data for that stock
+            df = self.bot.get_data(sym, self.sim_date)
+            df = self.bot.calculate_indicators(df)
+            # now plot the last 60 bars
+            df_last = df.tail(60)
+            self.ax.clear()
+            self.ax.plot(df_last.index, df_last["Close"], label="Price")
+            self.ax.legend(loc="upper left")
+            self.canvas.draw()
+
+    def _update_combobox(self):
+        # update the stock/ticker combobox with current portfolio 
+        vals = list({*self.bot.portfolio.keys(), *self.ticker_combo["values"]})
+        self.ticker_combo["values"] = vals
+
+    def destroy(self):
+        # Stops the bot
+        self.bot_running = False
+        # Quit the bot and end the task
+        try:
+            self.quit()
+        except Exception:
+            pass
+        # Destroy the window
+        super().destroy()
