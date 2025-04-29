@@ -31,3 +31,19 @@ def get_yahoo_finance_news(ticker_symbol):
         print(f"Error fetching news for {ticker_symbol}: {e}")
         return []
 
+def scrape_article_content(url):
+    #Scrape the full text of an article from its URL.
+
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+        paragraphs = soup.find_all('p')
+        content = ' '.join([p.get_text() for p in paragraphs])
+        print(f"Scraped content (first 100 chars): {content[:100]}")
+        return content
+    except Exception as e:
+        print(f"Error scraping article {url}: {e}")
+        return ""
+
