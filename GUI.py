@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox, simpledialog
 
 from TradingBot import TradingBot
 from SentimentBot import SentimentBot 
@@ -97,7 +97,6 @@ class TradingApp(tk.Tk):
         self.canvas = FigureCanvasTkAgg(self.fig, master=right)
         self.canvas.get_tk_widget().pack(fill="both", expand=True, pady=10)
 
-
     def _build_Sentiment_tab(self, nb: ttk.Notebook):
         """ Creates the Sentiment analysis tab that shows news artice titles and sentiment scores. """
         self.sentiment_frame = ttk.Frame(nb)
@@ -136,3 +135,90 @@ class TradingApp(tk.Tk):
         self.news_tree.column("VADER",    anchor="center", width= 80)
         self.news_tree.column("TextBlob", anchor="center", width= 80)
         self.news_tree.pack(fill="both", expand=True, padx=5, pady=5)
+
+    # ------------------------------------------------------------------ callbacks
+    def _add_stock(self):
+        """ Add the number of shares of seleceted stock/ticker to the portfolio."""
+        ticker = self.ticker_var.get().strip().upper()
+        shares = self.shares_entry.get().strip()
+        if not ticker or not shares:
+            messagebox.showerror("Input error", "Enter ticker and shares.")
+            return
+        try:
+            self.bot.search_stock(ticker, float(shares))
+            # Refresh available symbols in combobox
+            self._update_combobox()
+        except Exception as exc:
+            messagebox.showerror("Error", str(exc))
+
+    def _toggle_bot(self):
+        """ Start/stop the trading bot."""
+        if not self.bot_running and not self.bot.portfolio:
+            messagebox.showwarning(
+                "No stocks added",
+                "Please add at least one stock before starting the bot."
+            )
+            return
+        
+        # starting run → ask mode choice first
+        if not self.bot_running:
+            # Yes = LIVE, No = historical
+            use_live = messagebox.askyesno(
+                "Run Mode",
+                "Click YES to run on LIVE data,\nNO to run on HISTORICAL data."
+            )
+            if use_live:
+                self.sim_date = None
+            else:
+                date = simpledialog.askstring(
+                    "Historical Mode",
+                    "Enter date to simulate (YYYY-MM-DD):"
+                )
+                # if user cancels or gives no date, abort start
+                if not date:
+                    return
+                self.sim_date = date.strip()
+
+            # now we actually start
+            self.bot_running = True
+            # preload sim_data if needed
+            if self.sim_date:
+                self.sim_data = {}
+                self.sim_idx  = {}
+                for sym in self.bot.portfolio:
+                    df = self.bot.get_data(sym, self.sim_date)
+                    df = self.bot.calculate_indicators(df)
+                    self.sim_data[sym] = df
+                    self.sim_idx[sym] = 0
+
+            mode = f"SIM {self.sim_date}" if self.sim_date else "LIVE"
+            self.status_lbl.config(text=f"Status: Running ({mode})")
+            self.start_btn.config(text="Stop Bot")
+        else:
+            # stopping
+            self.bot_running = False
+            self.status_lbl.config(text="Status: Stopped")
+            self.start_btn.config(text="Start Bot")
+
+    def _analyze_news(self):
+        """ Analyze the sentiment scores of news articles for the selcted stocks """
+        sym = self.cmb_var.get().strip().upper()
+        if not sym:
+            return
+
+        df = self.sentiment_bot.process_news_sentiment(sym)
+        if df is None or df.empty:
+            messagebox.showinfo("No News", f"No articles found for {sym}.")
+            return
+
+        # clear and repopulate the Treeviews
+        self.news_tree.delete(*self.news_tree.get_children())
+        for _, row in df.iterrows():
+            self.news_tree.insert(
+                "", "end",
+                values=(
+                    row["title"],
+                    f"{row['vader_sentiment']:+.2f}",
+                    f"{row['textblob_sentiment']:+.2f}"
+                )
+            )
