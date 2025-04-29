@@ -3,13 +3,31 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from textblob import TextBlob
 import pandas as pd
 
+
 class SentimentBot:
     def __init__(self):
         # initialize a single VADER analyzer instance
         self.vader = SentimentIntensityAnalyzer()
 
     def process_news_sentiment(self, ticker_symbol: str) -> pd.DataFrame:
-        pass
+        """ Extract news articles for the given ticker/stock symbol and calculate the Vader and TextBlob sentiment scores. """
+        news_data = get_yahoo_finance_news(ticker_symbol)
+        if not news_data:
+            return pd.DataFrame(columns=['title', 'vader_sentiment', 'textblob_sentiment'])
+
+        records = []
+        for article in news_data:
+            title = article['title']
+            v_score = self.vader.polarity_scores(title)['compound']
+            tb_score = analyze_sentiment_textblob(title)
+            records.append({
+                'title': title,
+                'vader_sentiment': v_score,
+                'textblob_sentiment': tb_score
+            })
+        return pd.DataFrame(records)
+
+
 def get_yahoo_finance_news(ticker_symbol):
     """ Fetch news articles for a given stock ticker using yfinance. """
     try:
@@ -34,6 +52,7 @@ def get_yahoo_finance_news(ticker_symbol):
         print(f"Error fetching news for {ticker_symbol}: {e}")
         return []
 
+
 def analyze_sentiment_vader(text):
     """
     Perform sentiment analysis using VADER.
@@ -45,6 +64,7 @@ def analyze_sentiment_vader(text):
     sentiment = analyzer.polarity_scores(text)
     return sentiment['compound']
 
+
 def analyze_sentiment_textblob(text):
     """
     Perform sentiment analysis using TextBlob.
@@ -54,3 +74,5 @@ def analyze_sentiment_textblob(text):
         return 0.0
     blob = TextBlob(text)
     return blob.sentiment.polarity
+
+
