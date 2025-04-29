@@ -33,3 +33,24 @@ def get_yahoo_finance_news(ticker_symbol):
     except Exception as e:
         print(f"Error fetching news for {ticker_symbol}: {e}")
         return []
+
+def analyze_sentiment_vader(text):
+    """
+    Perform sentiment analysis using VADER.
+    Returns a score between -1 (negative) and 1 (positive).
+    """
+    if not text:
+        return 0.0
+    analyzer = SentimentIntensityAnalyzer()
+    sentiment = analyzer.polarity_scores(text)
+    return sentiment['compound']
+
+def analyze_sentiment_textblob(text):
+    """
+    Perform sentiment analysis using TextBlob.
+    Returns a score between -1 (negative) and 1 (positive).
+    """
+    if not text:
+        return 0.0
+    blob = TextBlob(text)
+    return blob.sentiment.polarity
