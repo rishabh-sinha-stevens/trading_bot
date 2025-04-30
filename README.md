@@ -17,11 +17,11 @@
 ## Installation
 
 ```bash
-# Clone the repository
+# Step 1:  Clone the repository
 git clone https://github.com/rishabh-sinha-stevens/trading_bot.git
 cd trading_bot
 
-# Install dependencies
+# Step 2: Install dependencies
 pip install -r requirements.txt
 ```
 
